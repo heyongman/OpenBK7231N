@@ -1,6 +1,9 @@
 name: build-firmware
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       app_path:
@@ -18,13 +21,25 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Set build parameters
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "APP_PATH=${{ inputs.app_path }}" >> $GITHUB_ENV
+            echo "APP_NAME=${{ inputs.app_name }}" >> $GITHUB_ENV
+            echo "APP_VERSION=${{ inputs.app_version }}" >> $GITHUB_ENV
+          else
+            SHORT_SHA=$(git rev-parse --short=12 HEAD)
+            echo "APP_PATH=apps/bthome_door" >> $GITHUB_ENV
+            echo "APP_NAME=bthome_door" >> $GITHUB_ENV
+            echo "APP_VERSION=0.0.0-${SHORT_SHA}" >> $GITHUB_ENV
+          fi
 
       - name: Install dependencies
         run: |
@@ -34,11 +49,11 @@ jobs:
       - name: Build firmware
         run: |
           chmod +x build_app.sh
-          ./build_app.sh "${{ inputs.app_path }}" "${{ inputs.app_name }}" "${{ inputs.app_version }}"
+          ./build_app.sh "${APP_PATH}" "${APP_NAME}" "${APP_VERSION}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ inputs.app_name }}-${{ inputs.app_version }}
+          name: firmware-${{ env.APP_NAME }}-${{ env.APP_VERSION }}
           path: |
-            ${{ inputs.app_path }}/output/${{ inputs.app_version }}/*
+            ${{ env.APP_PATH }}/output/${{ env.APP_VERSION }}/*
