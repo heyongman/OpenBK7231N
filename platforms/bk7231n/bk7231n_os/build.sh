@@ -12,6 +12,7 @@ echo USER_CMD=$USER_CMD
 echo BUILD_MODE=$BUILD_MODE
 
 USER_SW_VER=`echo $APP_VERSION | cut -d'-' -f1`
+APP_VERSION_SHORT=`echo $APP_VERSION | cut -c1-31`
 
 echo "Start Compile"
 set -e
@@ -93,7 +94,7 @@ rm ${APP_BIN_NAME}_${APP_VERSION}_enc_uart_1.00.bin
 #generate ota file
 echo "generate ota file"
 ./${RT_OTA_PACK_TOOL} -f ${APP_BIN_NAME}_${APP_VERSION}.bin -v $CURRENT_TIME -o ${APP_BIN_NAME}_${APP_VERSION}.rbl -p app -c gzip -s aes -k 0123456789ABCDEF0123456789ABCDEF -i 0123456789ABCDEF
-./${TY_PACKAGE} ${APP_BIN_NAME}_${APP_VERSION}.rbl ${APP_BIN_NAME}_UG_${APP_VERSION}.bin ${APP_VERSION:0:31} 
+./${TY_PACKAGE} ${APP_BIN_NAME}_${APP_VERSION}.rbl ${APP_BIN_NAME}_UG_${APP_VERSION}.bin ${APP_VERSION_SHORT} 
 echo rm ${APP_BIN_NAME}_${APP_VERSION}.rbl
 rm ${APP_BIN_NAME}_${APP_VERSION}.bin
 rm ${APP_BIN_NAME}_${APP_VERSION}.cpr
