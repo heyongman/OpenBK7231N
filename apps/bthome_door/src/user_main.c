@@ -9,6 +9,15 @@
 #include "wlan_ui_pub.h"
 #include "manual_ps_pub.h"
 
+const char *CFG_GetOpenBekenHostName(void)
+{
+#ifdef APP_BIN_NAME
+    return APP_BIN_NAME;
+#else
+    return "bthome_door";
+#endif
+}
+
 // -----------------------------
 // User config
 // -----------------------------
