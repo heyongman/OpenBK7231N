@@ -1,0 +1,44 @@
+name: build-firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_path:
+        description: "应用路径 (例如: apps/bthome_door)"
+        required: true
+        default: "apps/bthome_door"
+      app_name:
+        description: "应用名称 (目录名)"
+        required: true
+        default: "bthome_door"
+      app_version:
+        description: "固件版本号"
+        required: true
+        default: "1.0.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential wget git unzip python3 python3-pip python-is-python3 libc6-i386
+
+      - name: Build firmware
+        run: |
+          chmod +x build_app.sh
+          ./build_app.sh "${{ inputs.app_path }}" "${{ inputs.app_name }}" "${{ inputs.app_version }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ inputs.app_name }}-${{ inputs.app_version }}
+          path: |
+            ${{ inputs.app_path }}/output/${{ inputs.app_version }}/*

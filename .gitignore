@@ -17,7 +17,7 @@ platforms/bk7231n/bk7231n_os/tools/generate/*.rbl
 !platforms/bk7231n/toolchain/**/*.o
 
 
-apps/*
+# apps/*
 !apps/obk*
 !apps/bk*
 !apps/template*
