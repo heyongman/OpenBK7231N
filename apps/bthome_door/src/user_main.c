@@ -36,7 +36,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define ADV_READY_TIMEOUT_MS    2000
 
 // Battery via ADC (optional)
-#define BATT_ADC_ENABLE         1
+#define BATT_ADC_ENABLE         0
 // Note: in this Tuya BK7231N adapter, BATT_ADC_CH is 0-based:
 // 0->ADC1, 1->ADC2, 2->ADC3, 3->ADC4. (Driver does "+1" internally.)
 #define BATT_ADC_CH             2
