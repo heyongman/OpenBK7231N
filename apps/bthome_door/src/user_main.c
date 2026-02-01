@@ -32,7 +32,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define HALL_PULL_MODE          TY_GPIO_PULLUP
 
 // Advertise for a short window after wakeup
-#define ADV_DURATION_MS         400
+#define ADV_DURATION_MS         500
 #define ADV_READY_TIMEOUT_MS    2000
 
 // Battery via ADC (optional)

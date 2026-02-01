@@ -426,8 +426,8 @@ int tuya_os_adapt_bt_reset_adv(tuya_ble_data_buf_t *adv, tuya_ble_data_buf_t *sc
     memset(&adv_info, 0x00, sizeof(adv_info));
 
     adv_info.channel_map = 7;
-    adv_info.interval_min = 160;
-    adv_info.interval_max = 160;
+    adv_info.interval_min = 80;
+    adv_info.interval_max = 80;
 
     memcpy(adv_info.advData, adv->data, adv->len);
     adv_info.advDataLen = adv->len;
