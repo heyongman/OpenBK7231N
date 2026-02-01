@@ -37,11 +37,22 @@ const char *CFG_GetOpenBekenHostName(void)
 
 // Battery via ADC (optional)
 #define BATT_ADC_ENABLE         1
-#define BATT_ADC_CH             1   // ADC channel index (0..3). Set to match your HW.
+// Note: in this Tuya BK7231N adapter, BATT_ADC_CH is 0-based:
+// 0->ADC1, 1->ADC2, 2->ADC3, 3->ADC4. (Driver does "+1" internally.)
+#define BATT_ADC_CH             1
 #define BATT_DIVIDER_NUM        2   // Battery voltage divider ratio numerator
 #define BATT_DIVIDER_DEN        1   // Battery voltage divider ratio denominator
 #define BATT_MIN_MV             2000
 #define BATT_MAX_MV             3000
+
+// Some Tuya modules gate the battery divider into the ADC pin using a GPIO
+// (Tuya CBU "bat_relay") to reduce standby leakage.
+#define BATT_RELAY_ENABLE       1
+#define BATT_RELAY_PIN          TY_GPIOA_17
+#define BATT_RELAY_ACTIVE_HIGH  1
+#define BATT_RELAY_SETTLE_MS    5
+
+#define BATT_DEBUG_LOG          1
 
 // BTHome v2 constants
 #define BTHOME_UUID16_L         0xD2
@@ -76,6 +87,19 @@ static BOOL_T read_door_open(void)
 }
 
 #if BATT_ADC_ENABLE
+static void batt_relay_set(BOOL_T on)
+{
+#if BATT_RELAY_ENABLE
+    if (BATT_RELAY_ACTIVE_HIGH) {
+        tuya_gpio_write(BATT_RELAY_PIN, on ? TRUE : FALSE);
+    } else {
+        tuya_gpio_write(BATT_RELAY_PIN, on ? FALSE : TRUE);
+    }
+#else
+    (void)on;
+#endif
+}
+
 static uint8_t read_battery_percent(void)
 {
     tuya_adc_t adc;
@@ -83,30 +107,48 @@ static uint8_t read_battery_percent(void)
     uint16_t raw = 0;
     uint16_t mv = 0;
     uint32_t batt_mv;
+    uint8_t pct;
 
     memset(&adc, 0, sizeof(adc));
     memset(&cfg, 0, sizeof(cfg));
 
+    batt_relay_set(TRUE);
+#if BATT_RELAY_ENABLE
+    rtos_delay_milliseconds(BATT_RELAY_SETTLE_MS);
+#endif
+
     TUYA_ADC_CFG(&adc, BATT_ADC_CH, 0);
     if (tuya_adc_init(&adc) != OPRT_OK) {
+        batt_relay_set(FALSE);
         return 0xFF;
     }
 
     if (tuya_adc_voltage(&adc, &raw, &mv, 1) != OPRT_OK) {
         tuya_adc_deinit(&adc);
+        batt_relay_set(FALSE);
         return 0xFF;
     }
 
     tuya_adc_deinit(&adc);
+    batt_relay_set(FALSE);
 
     batt_mv = (uint32_t)mv * BATT_DIVIDER_NUM / BATT_DIVIDER_DEN;
     if (batt_mv <= BATT_MIN_MV) {
-        return 0;
+        pct = 0;
+        goto OUT;
     }
     if (batt_mv >= BATT_MAX_MV) {
-        return 100;
+        pct = 100;
+        goto OUT;
     }
-    return (uint8_t)((batt_mv - BATT_MIN_MV) * 100 / (BATT_MAX_MV - BATT_MIN_MV));
+    pct = (uint8_t)((batt_mv - BATT_MIN_MV) * 100 / (BATT_MAX_MV - BATT_MIN_MV));
+
+OUT:
+#if BATT_DEBUG_LOG
+    bk_printf("[batt] adc_ch=%d mv=%u batt_mv=%lu pct=%u\r\n",
+              (int)BATT_ADC_CH, (unsigned)mv, (unsigned long)batt_mv, (unsigned)pct);
+#endif
+    return pct;
 }
 #endif
 
@@ -220,6 +262,11 @@ void user_main(void)
 
     tuya_gpio_inout_set(LED_PIN, FALSE);
     // led_set(FALSE);
+
+#if BATT_ADC_ENABLE && BATT_RELAY_ENABLE
+    tuya_gpio_inout_set(BATT_RELAY_PIN, FALSE);
+    batt_relay_set(FALSE);
+#endif
 
     // Read door state and build BTHome advertisement
     door_open = read_door_open();
