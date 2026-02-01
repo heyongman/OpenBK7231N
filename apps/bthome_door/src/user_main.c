@@ -135,15 +135,15 @@ static uint8_t read_battery_percent(void)
     batt_mv = (uint32_t)mv * BATT_DIVIDER_NUM / BATT_DIVIDER_DEN;
     if (batt_mv <= BATT_MIN_MV) {
         pct = 0;
-        goto OUT;
+        goto BATT_DONE;
     }
     if (batt_mv >= BATT_MAX_MV) {
         pct = 100;
-        goto OUT;
+        goto BATT_DONE;
     }
     pct = (uint8_t)((batt_mv - BATT_MIN_MV) * 100 / (BATT_MAX_MV - BATT_MIN_MV));
 
-OUT:
+BATT_DONE:
 #if BATT_DEBUG_LOG
     bk_printf("[batt] adc_ch=%d mv=%u batt_mv=%lu pct=%u\r\n",
               (int)BATT_ADC_CH, (unsigned)mv, (unsigned long)batt_mv, (unsigned)pct);
