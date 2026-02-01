@@ -32,7 +32,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define HALL_PULL_MODE          TY_GPIO_PULLUP
 
 // Advertise for a short window after wakeup
-#define ADV_DURATION_MS         500
+#define ADV_DURATION_MS         1000
 #define ADV_READY_TIMEOUT_MS    2000
 
 // Battery via ADC (optional)
@@ -216,7 +216,7 @@ void user_main(void)
 
     // GPIO setup
     tuya_gpio_inout_set(HALL_PIN, TRUE);
-    // tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
+    tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
 
     tuya_gpio_inout_set(LED_PIN, FALSE);
     // led_set(FALSE);
