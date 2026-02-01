@@ -39,7 +39,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define BATT_ADC_ENABLE         1
 // Note: in this Tuya BK7231N adapter, BATT_ADC_CH is 0-based:
 // 0->ADC1, 1->ADC2, 2->ADC3, 3->ADC4. (Driver does "+1" internally.)
-#define BATT_ADC_CH             1
+#define BATT_ADC_CH             2
 #define BATT_DIVIDER_NUM        2   // Battery voltage divider ratio numerator
 #define BATT_DIVIDER_DEN        1   // Battery voltage divider ratio denominator
 #define BATT_MIN_MV             2000
