@@ -37,7 +37,7 @@ const char *CFG_GetOpenBekenHostName(void)
 
 // Battery via ADC (optional)
 #define BATT_ADC_ENABLE         1
-#define BATT_ADC_CH             0   // ADC channel index (0..3). Set to match your HW.
+#define BATT_ADC_CH             1   // ADC channel index (0..3). Set to match your HW.
 #define BATT_DIVIDER_NUM        2   // Battery voltage divider ratio numerator
 #define BATT_DIVIDER_DEN        1   // Battery voltage divider ratio denominator
 #define BATT_MIN_MV             2000
@@ -216,10 +216,10 @@ void user_main(void)
 
     // GPIO setup
     tuya_gpio_inout_set(HALL_PIN, TRUE);
-    tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
+    // tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
 
     tuya_gpio_inout_set(LED_PIN, FALSE);
-    led_set(FALSE);
+    // led_set(FALSE);
 
     // Read door state and build BTHome advertisement
     door_open = read_door_open();
