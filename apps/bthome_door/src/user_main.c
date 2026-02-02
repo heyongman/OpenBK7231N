@@ -34,6 +34,7 @@ const char *CFG_GetOpenBekenHostName(void)
 // Advertise for a short window after wakeup
 #define ADV_DURATION_MS         1000
 #define ADV_READY_TIMEOUT_MS    2000
+#define ADV_POLL_MS             50
 
 // Battery via ADC (optional)
 #define BATT_ADC_ENABLE         0
@@ -84,6 +85,29 @@ static BOOL_T read_door_open(void)
         return (val != 0) ? TRUE : FALSE;
     }
     return (val == 0) ? TRUE : FALSE;
+}
+
+static BOOL_T read_hall_level_stable(void)
+{
+    BOOL_T l1 = tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
+    rtos_delay_milliseconds(5);
+    {
+        BOOL_T l2 = tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
+        if (l1 == l2) {
+            return l1;
+        }
+    }
+    rtos_delay_milliseconds(5);
+    return tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
+}
+
+static BOOL_T read_door_open_stable(void)
+{
+    BOOL_T level = read_hall_level_stable();
+    if (DOOR_OPEN_WHEN_HIGH) {
+        return level ? TRUE : FALSE;
+    }
+    return level ? FALSE : TRUE;
 }
 
 #if BATT_ADC_ENABLE
@@ -225,6 +249,31 @@ static void bt_init_and_wait(void)
     }
 }
 
+static void advertise_window_with_updates(BOOL_T initial_door_open)
+{
+    BOOL_T last_state = initial_door_open;
+    uint32_t remaining = ADV_DURATION_MS;
+
+    while (remaining > 0) {
+        rtos_delay_milliseconds(ADV_POLL_MS);
+        if (remaining > ADV_POLL_MS) {
+            remaining -= ADV_POLL_MS;
+        } else {
+            remaining = 0;
+        }
+
+        {
+            BOOL_T now_state = read_door_open_stable();
+            if (now_state != last_state) {
+                last_state = now_state;
+                build_bthome_adv(now_state);
+                tuya_hal_bt_reset_adv(&g_adv_buf, &g_scan_buf);
+                remaining = ADV_DURATION_MS;
+            }
+        }
+    }
+}
+
 static void enter_deep_sleep_next_edge(BOOL_T current_level)
 {
     PS_DEEP_CTRL_PARAM deep_param;
@@ -239,11 +288,17 @@ static void enter_deep_sleep_next_edge(BOOL_T current_level)
         if (wake_on_low) {
             deep_param.gpio_edge_map = (1UL << idx); // 1: low level wakeup
         }
+        if (!current_level) {
+            deep_param.gpio_stay_lo_map = (1UL << idx);
+        }
     } else {
         uint32_t bit = idx - 32;
         deep_param.gpio_last_index_map = (1UL << bit);
         if (wake_on_low) {
             deep_param.gpio_last_edge_map = (1UL << bit); // 1: low level wakeup
+        }
+        if (!current_level) {
+            deep_param.gpio_stay_hi_map = (1UL << bit);
         }
     }
 
@@ -269,18 +324,19 @@ void user_main(void)
 #endif
 
     // Read door state and build BTHome advertisement
-    door_open = read_door_open();
+    door_open = read_door_open_stable();
     led_set(TRUE);
     build_bthome_adv(door_open);
 
     bt_init_and_wait();
 
-    // Keep advertising briefly, then sleep
-    rtos_delay_milliseconds(ADV_DURATION_MS);
+    // Keep advertising, update payload if door changes, then sleep
+    advertise_window_with_updates(door_open);
     tuya_hal_bt_stop_adv();
+    // rtos_delay_milliseconds(50);
 
     led_set(FALSE);
 
     // Enter deep sleep and wake on next edge of the hall sensor
-    enter_deep_sleep_next_edge((BOOL_T)tuya_gpio_read(HALL_PIN));
+    enter_deep_sleep_next_edge(read_hall_level_stable());
 }
