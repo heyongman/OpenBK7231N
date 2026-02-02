@@ -313,7 +313,7 @@ void user_main(void)
 
     // GPIO setup
     tuya_gpio_inout_set(HALL_PIN, TRUE);
-    tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
+    // tuya_gpio_mode_set(HALL_PIN, HALL_PULL_MODE);
 
     tuya_gpio_inout_set(LED_PIN, FALSE);
     // led_set(FALSE);
