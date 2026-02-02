@@ -32,7 +32,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define HALL_PULL_MODE          TY_GPIO_PULLUP
 
 // Advertise for a short window after wakeup
-#define ADV_DURATION_MS         1000
+#define ADV_DURATION_MS         2000
 #define ADV_READY_TIMEOUT_MS    2000
 #define ADV_POLL_MS             50
 
@@ -333,7 +333,7 @@ void user_main(void)
     // Keep advertising, update payload if door changes, then sleep
     advertise_window_with_updates(door_open);
     tuya_hal_bt_stop_adv();
-    // rtos_delay_milliseconds(50);
+    rtos_delay_milliseconds(50);
 
     led_set(FALSE);
 
