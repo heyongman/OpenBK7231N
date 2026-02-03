@@ -101,6 +101,29 @@ static BOOL_T read_hall_level_stable(void)
     return tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
 }
 
+static BOOL_T wait_hall_level_stable(BOOL_T level, uint32_t stable_ms, uint32_t timeout_ms)
+{
+    uint32_t ok_ms = 0;
+    uint32_t waited = 0;
+
+    while (waited < timeout_ms) {
+        BOOL_T cur = tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
+        if (cur == level) {
+            ok_ms += 5;
+            if (ok_ms >= stable_ms) {
+                return TRUE;
+            }
+        } else {
+            ok_ms = 0;
+        }
+
+        rtos_delay_milliseconds(5);
+        waited += 5;
+    }
+
+    return FALSE;
+}
+
 static BOOL_T read_door_open_stable(void)
 {
     BOOL_T level = read_hall_level_stable();
@@ -288,18 +311,16 @@ static void enter_deep_sleep_next_edge(BOOL_T current_level)
         if (wake_on_low) {
             deep_param.gpio_edge_map = (1UL << idx); // 1: low level wakeup
         }
-        if (!current_level) {
-            deep_param.gpio_stay_lo_map = (1UL << idx);
-        }
+        // Keep this GPIO out of high-impedance deep-ps configuration so its pull
+        // state remains valid in deep sleep (avoids floating -> spurious wakeups).
+        deep_param.gpio_stay_lo_map = (1UL << idx);
     } else {
         uint32_t bit = idx - 32;
         deep_param.gpio_last_index_map = (1UL << bit);
         if (wake_on_low) {
             deep_param.gpio_last_edge_map = (1UL << bit); // 1: low level wakeup
         }
-        if (!current_level) {
-            deep_param.gpio_stay_hi_map = (1UL << bit);
-        }
+        deep_param.gpio_stay_hi_map = (1UL << bit);
     }
 
     bk_enter_deep_sleep_mode(&deep_param);
@@ -333,10 +354,17 @@ void user_main(void)
     // Keep advertising, update payload if door changes, then sleep
     advertise_window_with_updates(door_open);
     tuya_hal_bt_stop_adv();
-    rtos_delay_milliseconds(50);
+    // rtos_delay_milliseconds(50);
 
     led_set(FALSE);
 
-    // Enter deep sleep and wake on next edge of the hall sensor
-    enter_deep_sleep_next_edge(read_hall_level_stable());
+    // Deep-sleep GPIO wake on BK7231N is level-based. If the hall signal is bouncing
+    // or floating when we enter deep sleep, it may immediately wake again.
+    // Ensure the input stays stable for a short window before sleeping.
+    {
+        BOOL_T level = read_hall_level_stable();
+        (void)wait_hall_level_stable(level, 80, 1000);
+        level = read_hall_level_stable();
+        enter_deep_sleep_next_edge(level);
+    }
 }
