@@ -32,7 +32,7 @@ const char *CFG_GetOpenBekenHostName(void)
 #define HALL_PULL_MODE          TY_GPIO_PULLUP
 
 // Advertise for a short window after wakeup
-#define ADV_DURATION_MS         2000
+#define ADV_DURATION_MS         3000
 #define ADV_READY_TIMEOUT_MS    2000
 #define ADV_POLL_MS             50
 
@@ -99,29 +99,6 @@ static BOOL_T read_hall_level_stable(void)
     }
     rtos_delay_milliseconds(5);
     return tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
-}
-
-static BOOL_T wait_hall_level_stable(BOOL_T level, uint32_t stable_ms, uint32_t timeout_ms)
-{
-    uint32_t ok_ms = 0;
-    uint32_t waited = 0;
-
-    while (waited < timeout_ms) {
-        BOOL_T cur = tuya_gpio_read(HALL_PIN) ? TRUE : FALSE;
-        if (cur == level) {
-            ok_ms += 5;
-            if (ok_ms >= stable_ms) {
-                return TRUE;
-            }
-        } else {
-            ok_ms = 0;
-        }
-
-        rtos_delay_milliseconds(5);
-        waited += 5;
-    }
-
-    return FALSE;
 }
 
 static BOOL_T read_door_open_stable(void)
@@ -363,8 +340,6 @@ void user_main(void)
     // Ensure the input stays stable for a short window before sleeping.
     {
         BOOL_T level = read_hall_level_stable();
-        (void)wait_hall_level_stable(level, 80, 1000);
-        level = read_hall_level_stable();
         enter_deep_sleep_next_edge(level);
     }
 }
